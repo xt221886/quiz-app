@@ -286,8 +286,18 @@ const el = {
 };
 
 let currentTab = 'home';
+let bankSubTab = 'exam'; // 'exam'=历年真题 'chapter'=章节练习
 let navStack = []; // for back button navigation within a tab
 let examTimer = null;
+
+// 圣题库标准五大题型分类
+const QUESTION_TYPES = [
+  { key: 'oral',        name: '口语交际',     icon: '💬', desc: '完成对话、访谈问答、场景交际' },
+  { key: 'vocabulary',  name: '词汇',         icon: '📝', desc: '划线词替换、词义辨析、选词填空' },
+  { key: 'reading',     name: '阅读理解',     icon: '📖', desc: '篇章阅读、主旨推断、细节理解' },
+  { key: 'cloze',       name: '完形填空',     icon: '🔲', desc: '语境推断、语法衔接、词义复现' },
+  { key: 'completion',  name: '短文完成',     icon: '✏️', desc: '语篇填空、逻辑衔接、语法补全' },
+];
 
 function showToast(msg) {
   const t = el.toast;
@@ -334,12 +344,20 @@ function pushNav(fn) { navStack.push(fn); }
 
 function navigate(tab, subPage, ...args) {
   setTab(tab);
+  navStack = [];
   switch (tab) {
     case 'home': renderHome(); break;
-    case 'practice': subPage ? renderPracticeSub(subPage, ...args) : renderPractice(); break;
+    case 'bank': subPage ? renderBankSub(subPage, ...args) : renderBank(); break;
     case 'wrong': renderWrongBook(); break;
-    case 'stats': renderStats(); break;
+    case 'me': renderMe(); break;
   }
+}
+
+// Also support old tab names for backward compatibility/redirects
+function navigateLegacy(tab, subPage, ...args) {
+  if (tab === 'practice') { navigate('bank', subPage, ...args); return; }
+  if (tab === 'stats') { navigate('me'); return; }
+  navigate(tab, subPage, ...args);
 }
 
 // Listen for tab clicks
@@ -375,15 +393,15 @@ async function renderHome() {
 
   // Quick actions
   html += '<div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin:8px 0;">';
-  html += `<button class="btn btn-primary btn-block" onclick="App.navigate('practice')">📝 开始练习</button>`;
-  html += `<button class="btn btn-outline btn-block" onclick="App.navigate('practice','examSetup')">⏱ 模拟考试</button>`;
+  html += `<button class="btn btn-primary btn-block" onclick="App.navigate('bank')">📝 开始练习</button>`;
+  html += `<button class="btn btn-outline btn-block" onclick="App.navigate('bank','examSetup')">⏱ 模拟考试</button>`;
   html += '</div>';
 
   // Chapters
   if (chapters.length > 0) {
     html += '<div class="section-title">📚 章节练习</div>';
     for (const c of chapters) {
-      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(c.name)})">`;
+      html += `<div class="list-item" onclick="App.navigate('bank','chapter',${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
@@ -394,7 +412,7 @@ async function renderHome() {
   if (papers.length > 0) {
     html += '<div class="section-title">📋 历年真题</div>';
     for (const c of papers) {
-      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(c.name)})">`;
+      html += `<div class="list-item" onclick="App.navigate('bank','chapter',${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
@@ -406,61 +424,78 @@ async function renderHome() {
   html += `<div class="list-item" onclick="App.navigate('wrong')">`;
   html += `<div class="item-info"><div class="item-title">📖 错题本</div><div class="item-desc">${stats.wrongCount > 0 ? stats.wrongCount + '道错题待复习' : '暂无错题'}</div></div>`;
   html += '<span class="arrow">›</span></div>';
-  html += `<div class="list-item" onclick="App.navigate('practice','favorites')">`;
+  html += `<div class="list-item" onclick="App.navigate('bank','favorites')">`;
   html += '<div class="item-info"><div class="item-title">⭐ 我的收藏</div></div>';
   html += '<span class="arrow">›</span></div>';
 
   showContent(html);
 }
 
-// ===================== Render: Practice =====================
+// ===================== Render: 题库 (圣题库: 历年真题 + 章节练习) =====================
 
-function renderPractice() {
-  setHeader('选择章节', false);
-  setTab('practice');
+function renderBank() {
+  setHeader('题库');
+  setTab('bank');
+  bankSubTab = bankSubTab || 'exam';
 
   const cats = getCategories();
-  let html = '';
-  html += `<div class="section-title">🎯 随机练习</div>`;
-  html += `<div class="list-item" onclick="App.startPractice()">`;
-  html += `<div class="item-info"><div class="item-title">全部题库随机</div><div class="item-desc">${Q_CACHE.size}道题随机出题</div></div>`;
-  html += '<span class="arrow">›</span></div>';
-
   const chapters = cats.filter(c => !c.isExamPaper);
   const papers = cats.filter(c => c.isExamPaper);
 
-  if (chapters.length > 0) {
-    html += '<div class="section-title">📚 章节练习</div>';
-    for (const c of chapters) {
-      html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
-      html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
-      html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
-      html += '</div>';
+  let html = '';
+
+  // Sub-tabs: 历年真题 | 章节练习
+  html += '<div class="tabs">';
+  html += `<a class="${bankSubTab === 'exam' ? 'active' : ''}" onclick="App.switchBankTab('exam')">📋 历年真题</a>`;
+  html += `<a class="${bankSubTab === 'chapter' ? 'active' : ''}" onclick="App.switchBankTab('chapter')">📚 章节练习</a>`;
+  html += '</div>';
+
+  if (bankSubTab === 'exam') {
+    if (papers.length > 0) {
+      for (const c of papers) {
+        html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
+        html += `<div class="item-info"><div class="item-title">📄 ${escHtml(c.name)}</div></div>`;
+        html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
+        html += '</div>';
+      }
+    } else {
+      html += '<div class="empty-state"><div class="empty-icon">📋</div><p>暂无历年真题</p></div>';
+    }
+    html += `<div class="section-title">⚙️ 考试模式</div>`;
+    html += `<div class="list-item" onclick="App.navigate('bank','examSetup')">`;
+    html += `<div class="item-info"><div class="item-title">⏱ 模拟考试</div><div class="item-desc">限时答题，检验真实水平</div></div>`;
+    html += '<span class="arrow">›</span></div>';
+  } else {
+    html += `<div class="list-item" onclick="App.startPractice()">`;
+    html += `<div class="item-info"><div class="item-title">🎯 全部随机</div><div class="item-desc">${Q_CACHE.size}道题随机出题</div></div>`;
+    html += '<span class="arrow">›</span></div>';
+    for (const qt of QUESTION_TYPES) {
+      const typeChapters = chapters.filter(c => c.name.includes(qt.name));
+      if (typeChapters.length > 0) {
+        html += `<div class="section-title">${qt.icon} ${qt.name}</div>`;
+        for (const c of typeChapters) {
+          html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
+          html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div><div class="item-desc">${qt.desc}</div></div>`;
+          html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
+          html += '</div>';
+        }
+      }
     }
   }
 
-  if (papers.length > 0) {
-    html += '<div class="section-title">📋 历年真题</div>';
-    for (const c of papers) {
-      html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
-      html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
-      html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
-      html += '</div>';
-    }
-  }
-
-  html += '<div class="section-title">⚙️ 其他</div>';
-  html += `<div class="list-item" onclick="App.navigate('practice','examSetup')">`;
-  html += `<div class="item-info"><div class="item-title">⏱ 模拟考试</div><div class="item-desc">限时答题，检验水平</div></div>`;
-  html += '<span class="arrow">›</span></div>';
-  html += `<div class="list-item" onclick="App.navigate('practice','favorites')">`;
-  html += '<div class="item-info"><div class="item-title">⭐ 我的收藏</div></div>';
-  html += '<span class="arrow">›</span></div>';
-
-  // Add an "about/info" section at the bottom so the content doesn't get hidden by the tab bar
   html += `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">同等学力英语刷题助手 · PWA离线版</div>`;
-
   showContent(html);
+}
+
+function switchBankTab(sub) {
+  bankSubTab = sub;
+  renderBank();
+}
+
+// Backward compatibility
+function renderPractice() {
+  bankSubTab = 'chapter';
+  renderBank();
 }
 
 function renderPracticeSub(subPage, ...args) {
@@ -474,6 +509,9 @@ function renderPracticeSub(subPage, ...args) {
     case 'favorites': renderFavorites(); break;
   }
 }
+
+// Alias for new tab name
+function renderBankSub(subPage, ...args) { return renderPracticeSub(subPage, ...args); }
 
 function renderChapterPractice(catName) {
   pushNav(() => renderPractice());
@@ -494,7 +532,7 @@ async function startPractice(catName) {
   }
 
   pushNav(() => renderPractice());
-  setTab('practice');
+  setTab('bank');
 
   const qids = qs.map(q => q.id);
   renderPracticeQuestion(qids, 0, 0, Date.now());
@@ -503,9 +541,9 @@ async function startPractice(catName) {
 function renderPracticeQuestion(qids, idx, correct, startTime, errorCount = 0) {
   setHeader(`练习 ${idx + 1}/${qids.length}`, idx > 0, () => {
     // Go back to practice list
-    navigate('practice');
+    navigate('bank');
   });
-  setTab('practice');
+  setTab('bank');
 
   const qid = qids[idx];
   const q = getQuestion(qid);
@@ -615,8 +653,8 @@ async function nextQuestion() {
 }
 
 function renderPracticeResult(total, correct, elapsed) {
-  setHeader('练习结果', true, () => navigate('practice'));
-  setTab('practice');
+  setHeader('练习结果', true, () => navigate('bank'));
+  setTab('bank');
 
   const accuracy = total > 0 ? Math.round(correct / total * 100) : 0;
   const cls = accuracy >= 80 ? 'result-great' : accuracy >= 50 ? 'result-good' : 'result-poor';
@@ -632,7 +670,7 @@ function renderPracticeResult(total, correct, elapsed) {
 
   html += '<div class="form-actions" style="text-align:center;padding:16px;">';
   html += `<button class="btn btn-primary" onclick="App.startPractice()">再来一轮</button>`;
-  html += `<button class="btn btn-outline" style="margin-left:8px;" onclick="App.navigate('practice')">返回列表</button>`;
+  html += `<button class="btn btn-outline" style="margin-left:8px;" onclick="App.navigate('bank')">返回列表</button>`;
   html += '</div>';
 
   showContent(html);
@@ -647,8 +685,8 @@ async function toggleFav(qid, btn) {
 }
 
 async function renderFavorites() {
-  setHeader('我的收藏', true, () => navigate('practice'));
-  setTab('practice');
+  setHeader('我的收藏', true, () => navigate('bank'));
+  setTab('bank');
   pushNav(() => renderPractice());
 
   const favs = await getFavorites();
@@ -676,15 +714,15 @@ async function practiceFav(qid) {
   const related = getRandomQuestions(Math.min(20, Q_CACHE.size), q.catName);
   const qids = related.map(q => q.id);
   pushNav(() => renderFavorites());
-  setTab('practice');
+  setTab('bank');
   renderPracticeQuestion(qids, 0, 0, Date.now());
 }
 
 // ===================== Exam Mode =====================
 
 function renderExamSetup() {
-  setHeader('模拟考试', true, () => navigate('practice'));
-  setTab('practice');
+  setHeader('模拟考试', true, () => navigate('bank'));
+  setTab('bank');
   pushNav(() => renderPractice());
 
   const cats = getCategories();
@@ -739,13 +777,13 @@ async function startExam() {
   const qs = getRandomQuestions(count, catName);
   if (qs.length === 0) { showToast('没有题目'); return; }
 
-  setTab('practice');
+  setTab('bank');
   renderExamPage(qs.map(q => q.id), timeLimit, Date.now());
 }
 
 function renderExamPage(qids, timeLimit, startTime) {
   setHeader('考试中');
-  setTab('practice');
+  setTab('bank');
 
   // Initialize answers
   const answers = {};
@@ -887,7 +925,7 @@ function renderExamPage(qids, timeLimit, startTime) {
 
 function renderExamResult(qids, answers, elapsed) {
   setHeader('考试结果', false);
-  setTab('practice');
+  setTab('bank');
 
   let correct = 0;
   const details = [];
@@ -933,8 +971,8 @@ function renderExamResult(qids, answers, elapsed) {
 
   // Actions
   html += '<div style="text-align:center;padding:16px;">';
-  html += `<button class="btn btn-primary" onclick="App.navigate('practice','examSetup')">再来一场</button>`;
-  html += `<button class="btn btn-outline" style="margin-left:8px;" onclick="App.navigate('practice')">返回练习</button>`;
+  html += `<button class="btn btn-primary" onclick="App.navigate('bank','examSetup')">再来一场</button>`;
+  html += `<button class="btn btn-outline" style="margin-left:8px;" onclick="App.navigate('bank')">返回练习</button>`;
   html += '</div>';
 
   showContent(html);
@@ -1007,13 +1045,16 @@ async function redoWrong(qid) {
 
 // ===================== Stats =====================
 
-async function renderStats() {
-  setHeader('学习统计', false);
-  setTab('stats');
+// ===================== Render: 我的 (圣题库: 统计 + 收藏 + 设置) =====================
+
+async function renderMe() {
+  setHeader('我的');
+  setTab('me');
 
   const stats = await getStats();
 
   let html = '';
+  // Stats overview
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="num">${stats.totalRecords}</div><div class="label">总答题数</div></div>`;
   html += `<div class="stat-card"><div class="num green">${stats.correctCount}</div><div class="label">正确</div></div>`;
@@ -1051,12 +1092,24 @@ async function renderStats() {
     }
   }
 
+  // Tools: favorites, clear data, about
+  html += '<div class="section-title">⚙️ 工具</div>';
+  html += `<div class="list-item" onclick="App.navigate('bank','favorites')">`;
+  html += '<div class="item-info"><div class="item-title">⭐ 我的收藏</div></div>';
+  html += '<span class="arrow">›</span></div>';
+  html += `<div class="list-item" onclick="App.showConfirm('确定清空所有答题记录？', async () => { await idbClear(\"records\"); App.navigate(\"me\"); })">`;
+  html += '<div class="item-info"><div class="item-title" style="color:var(--danger);">🗑 清除答题记录</div></div>';
+  html += '<span class="arrow">›</span></div>';
+
   html += '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">';
-  html += `连续学习 ${stats.streakDays} 天 🔥<br>题库共 ${stats.totalQuestions} 题`;
+  html += `连续学习 ${stats.streakDays} 天 🔥 · 题库共 ${stats.totalQuestions} 题<br>圣题库结构 · PWA离线版 · v1.0`;
   html += '</div>';
 
   showContent(html);
 }
+
+// Keep backward compat
+async function renderStats() { return renderMe(); }
 
 // ===================== Confirm Dialog =====================
 
@@ -1118,11 +1171,13 @@ async function init() {
 
 window.App = {
   navigate,
+  navigateLegacy,
   startPractice,
   selectOption,
   nextQuestion,
   submitAnswer,
   toggleFav,
+  switchBankTab,
   examGoTo: (idx) => window.examGoTo && window.examGoTo(idx),
   examSelect: (idx, letter) => window.examSelect && window.examSelect(idx, letter),
   examSubmit: () => window.examSubmit && window.examSubmit(),
