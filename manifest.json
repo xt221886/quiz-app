@@ -1,0 +1,24 @@
+{
+  "name": "同等学力英语刷题",
+  "short_name": "英语刷题",
+  "description": "同等学力申硕英语考试题库 - 章节练习、历年真题、模拟考试、错题本",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F4F6",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

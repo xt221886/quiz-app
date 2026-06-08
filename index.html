@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="英语刷题">
+<meta name="theme-color" content="#3B82F6">
+<meta name="description" content="同等学力申硕英语考试刷题助手">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>同等学力英语刷题</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-shell" id="app">
+
+  <!-- ===== Header ===== -->
+  <div class="app-header" id="header">
+    <button class="back-btn" id="backBtn" style="visibility:hidden">←</button>
+    <h1 id="headerTitle">英语刷题</h1>
+    <span style="width:36px"></span>
+  </div>
+
+  <!-- ===== Content ===== -->
+  <div class="app-content" id="content"></div>
+
+  <!-- ===== Bottom Tab Bar ===== -->
+  <div class="bottom-nav" id="bottomNav">
+    <button class="tab active" data-tab="home">
+      <span class="tab-icon">🏠</span>首页
+    </button>
+    <button class="tab" data-tab="practice">
+      <span class="tab-icon">📝</span>练习
+    </button>
+    <button class="tab" data-tab="wrong">
+      <span class="tab-icon">📖</span>错题本
+    </button>
+    <button class="tab" data-tab="stats">
+      <span class="tab-icon">📊</span>统计
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
