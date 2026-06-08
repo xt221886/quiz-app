@@ -383,7 +383,7 @@ async function renderHome() {
   if (chapters.length > 0) {
     html += '<div class="section-title">📚 章节练习</div>';
     for (const c of chapters) {
-      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(JSON.stringify(c.name))})">`;
+      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
@@ -394,7 +394,7 @@ async function renderHome() {
   if (papers.length > 0) {
     html += '<div class="section-title">📋 历年真题</div>';
     for (const c of papers) {
-      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(JSON.stringify(c.name))})">`;
+      html += `<div class="list-item" onclick="App.navigate('practice','chapter',${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
@@ -432,7 +432,7 @@ function renderPractice() {
   if (chapters.length > 0) {
     html += '<div class="section-title">📚 章节练习</div>';
     for (const c of chapters) {
-      html += `<div class="list-item" onclick="App.startPractice(${esc(JSON.stringify(c.name))})">`;
+      html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
@@ -442,7 +442,7 @@ function renderPractice() {
   if (papers.length > 0) {
     html += '<div class="section-title">📋 历年真题</div>';
     for (const c of papers) {
-      html += `<div class="list-item" onclick="App.startPractice(${esc(JSON.stringify(c.name))})">`;
+      html += `<div class="list-item" onclick="App.startPractice(${esc(c.name)})">`;
       html += `<div class="item-info"><div class="item-title">${escHtml(c.name)}</div></div>`;
       html += `<div class="item-right"><span class="count-badge">${c.count}题</span><span class="arrow">›</span></div>`;
       html += '</div>';
