@@ -1107,7 +1107,7 @@ async function init() {
     }
 
     // First run: show home
-    renderHome();
+    await renderHome();
   } catch (e) {
     console.error('Init error:', e);
     showContent(`<div class="empty-state"><div class="empty-icon">⚠</div><p>加载失败，请检查网络后重试</p><p style="font-size:12px;color:var(--text3);">${escHtml(e.message)}</p></div>`);
