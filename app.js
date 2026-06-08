@@ -1085,7 +1085,8 @@ function escHtml(s) {
 }
 
 function esc(s) {
-  return JSON.stringify(s);
+  // Single-quoted JS string literal — avoids conflict with HTML double-quote attribute delimiters
+  return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n') + "'";
 }
 
 // ===================== Init =====================
