@@ -475,6 +475,11 @@ function renderPracticeSub(subPage, ...args) {
   }
 }
 
+function renderChapterPractice(catName) {
+  pushNav(() => renderPractice());
+  startPractice(catName);
+}
+
 // ===================== Practice Flow =====================
 
 async function startPractice(catName) {
@@ -1086,28 +1091,26 @@ function esc(s) {
 // ===================== Init =====================
 
 async function init() {
-  loadAllQuestions();
-  await openDB();
+  try {
+    loadAllQuestions();
+    await openDB();
 
-  // Register Service Worker
-  if ('serviceWorker' in navigator) {
-    try {
-      await navigator.serviceWorker.register('sw.js');
-      console.log('SW registered');
-    } catch (e) {
-      console.log('SW registration failed:', e);
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('sw.js');
+        console.log('SW registered');
+      } catch (e) {
+        console.log('SW registration failed:', e);
+      }
     }
+
+    // First run: show home
+    renderHome();
+  } catch (e) {
+    console.error('Init error:', e);
+    showContent(`<div class="empty-state"><div class="empty-icon">⚠</div><p>加载失败，请检查网络后重试</p><p style="font-size:12px;color:var(--text3);">${escHtml(e.message)}</p></div>`);
   }
-
-  // First run: show home
-  renderHome();
-
-  // Periodically check for updates
-  setInterval(async () => {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      // SW handles updates automatically
-    }
-  }, 3600000);
 }
 
 // ===================== Public API (exposed to onclick handlers) =====================
